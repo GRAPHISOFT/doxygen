@@ -1419,15 +1419,15 @@ void addMemberToGroups(const Entry *root,MemberDef *md)
   bool multigroupFunctions = Config_getBool(MULTIGROUP_FUNCTIONS);
 
   if (multigroupFunctions) {
-    bool firstgroufound = false;
+    bool firstGroupFound = false;
     for (const Grouping &g : root->groups)
     {
       GroupDef *gd = Doxygen::groupLinkedMap->find(g.groupname);
       if (gd)
       {
         bool success = gd->insertMember(md);
-        if (success && !firstgroufound) {
-          firstgroufound = true;
+        if (success && !firstGroupFound) {
+          firstGroupFound = true;
           MemberDefMutable *mdm = toMemberDefMutable(md);
           if (mdm)
           {
