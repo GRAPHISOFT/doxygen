@@ -73,6 +73,159 @@ function getYPos(item)
   return y;
 }
 
+
+class SearchRelevance {
+  constructor(name, searchValue) {
+    this.name = name;
+    this.searchValue = searchValue;
+
+    this.charAt = [];
+    this.distance = -1;
+    this.searchChars();
+  }
+
+  compare(other) {
+    if (this.charAt.length < other.charAt.length) {
+      return -1;
+    } else if (this.charAt.length > other.charAt.length) {
+      return 1;
+    }
+
+
+    let parts = [[this.charAt[0]]];
+    let otherParts = [[other.charAt[0]]];
+    for (let i = 1; i < this.charAt.length; i++) {
+      if (this.charAt[i] - this.charAt[i - 1] > 1) {
+        parts.push([this.charAt[i]]);
+      } else {
+        parts[parts.length - 1].push(this.charAt[i]);
+      }
+      if (other.charAt[i] - other.charAt[i - 1] > 1) {
+        otherParts.push([other.charAt[i]]);
+      } else {
+        otherParts[otherParts.length - 1].push(other.charAt[i]);
+      }
+    }
+
+    if (parts.length < otherParts.length) {
+      return -1;
+    } else if (parts.length > otherParts.length) {
+      return 1;
+    }
+
+    let sortFunction = function(a, b) {
+      if (a.length === b.length) {
+        if (a[0] === b[0]) {
+          return 0;
+        }
+        return a[0] < b[0] ? -1 : 1;
+      }
+      return a.length < b.length ? 1 : -1;
+    };
+
+    let partsByLengthAndIndex = [...parts].sort(sortFunction);
+    let otherPartsByLengthAndIndex = [...otherParts].sort(sortFunction);
+    for (let i = 0; i < partsByLengthAndIndex.length; i++) {
+      if (partsByLengthAndIndex[i].length > otherPartsByLengthAndIndex[i].length) {
+        return -1;
+      } else if (partsByLengthAndIndex[i].length < otherPartsByLengthAndIndex[i].length) {
+        return 1;
+      }
+
+      if (partsByLengthAndIndex[i][0] < otherPartsByLengthAndIndex[i][0]) {
+        return -1;
+      } else if (partsByLengthAndIndex[i][0] > otherPartsByLengthAndIndex[i][0]) {
+        return 1;
+      }
+    }
+
+    if (this.name.length < other.name.length) {
+      return -1;
+    } else if (this.name.length > other.name.length) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  searchChars() {
+    if (this.name.length < this.searchValue.length) {
+      return;
+    }
+
+    let charMap = new Map();
+    for (let i = 0; i < this.name.length; i++) {
+      if (this.searchValue.includes(this.name[i])) {
+        if (charMap.has(this.name[i])) {
+          charMap.get(this.name[i]).push(i);
+        } else {
+          charMap.set(this.name[i], [i]);
+        }
+      }
+    }
+
+    let findNextChar = function (startIndex, nextCharIndex) {
+      let char = searchValue[nextCharIndex];
+      if (!charMap.has(char)) {
+        return -1;
+      }
+
+      for (let charIndex of charMap.get(char)) {
+        if (startIndex < charIndex) {
+          return charIndex;
+        }
+      }
+      return -1;
+    };
+
+    let searchValue = this.searchValue;
+    let findNextCharIndex = function(startIndex, i) {
+      let nextCharIndex = i + 1;
+
+      let nextChar = findNextChar(startIndex, nextCharIndex);
+      if (nextChar < 0) {
+        return [];
+      }
+
+      return [nextChar].concat(findNextCharIndex (nextChar, nextCharIndex));
+    };
+
+    let getDistance = function(charIndeces) {
+      if (charIndeces.length < 2) {
+        return 0;
+      }
+      return charIndeces[charIndeces.length - 1] - charIndeces[0];
+    };
+
+    let closestMatch = [];
+    let closesetDistance = undefined;
+    if (!charMap.has(this.searchValue[0])) {
+      return;
+    }
+    for (let i of charMap.get(this.searchValue[0])) {
+      let currentMatch = [i].concat(findNextCharIndex(i, 0));
+      if (currentMatch.length < this.searchValue.length) {
+        break;
+      }
+      let distance = getDistance(currentMatch);
+      if (closesetDistance === undefined || distance < closesetDistance) {
+        closestMatch = currentMatch;
+        closesetDistance = distance;
+      }
+    }
+    if (closestMatch.length < this.searchValue.length) {
+      return;
+    }
+    this.charAt = closestMatch;
+    this.distance = closesetDistance;
+  }
+
+  matched() {
+    return this.charAt.length === this.searchValue.length;
+  }
+}
+
+
 var searchResults = new SearchResults("searchResults");
 
 /* A class handling everything associated with the search panel.
@@ -204,7 +357,7 @@ function SearchBox(name, resultsPath, extension)
     }
 
     // strip whitespaces
-    var searchValue = this.DOMSearchField().value.replace(/ +/g, "");
+    var searchValue = this.DOMSearchField().value.replaceAll(" ", "");
 
     if (searchValue != this.lastSearchValue) // search value has changed
     {
@@ -267,7 +420,7 @@ function SearchBox(name, resultsPath, extension)
   {
     this.searchIndex = id;
     this.SelectItemSet(id);
-    var searchValue = this.DOMSearchField().value.replace(/ +/g, "");
+    var searchValue = this.DOMSearchField().value.replaceAll(" ", "");
     if (searchValue!="" && this.searchActive) // something was found -> do a search
     {
       this.Search();
@@ -317,22 +470,12 @@ function SearchBox(name, resultsPath, extension)
     this.keyTimeout = 0;
 
     // strip leading whitespace
-    var searchValue = this.DOMSearchField().value.replace(/^ +/, "");
+    var searchValue = this.DOMSearchField().value.replaceAll(" ", "");
 
-    var code = searchValue.toLowerCase().charCodeAt(0);
-    var idxChar = searchValue.substr(0, 1).toLowerCase();
-    if ( 0xD800 <= code && code <= 0xDBFF && searchValue > 1) // surrogate pair
-    {
-      idxChar = searchValue.substr(0, 2);
-    }
-
-    var jsFile;
-
-    var idx = indexSectionsWithContent[this.searchIndex].indexOf(idxChar);
-    if (idx!=-1)
-    {
-       var hexCode=idx.toString(16);
-       jsFile = this.resultsPath + indexSectionNames[this.searchIndex] + '_' + hexCode + '.js';
+    var jsFiles = [];
+    for (let char of indexSectionsWithContent[this.searchIndex]) {      
+      var hexCode=indexSectionsWithContent[this.searchIndex].indexOf(char).toString(16);
+      jsFiles.push(this.resultsPath + indexSectionNames[this.searchIndex] + '_' + hexCode + '.js');
     }
 
     var loadJS = function(url, impl, loc){
@@ -348,19 +491,9 @@ function SearchBox(name, resultsPath, extension)
     var domPopupSearchResults = this.DOMPopupSearchResults();
     var domSearchClose = this.DOMSearchClose();
     var resultsPath = this.resultsPath;
-
-    var handleResults = function() {
-      document.getElementById("Loading").style.display="none";
-      if (typeof searchData !== 'undefined') {
-        createResults(resultsPath);
-        document.getElementById("NoMatches").style.display="none";
-      }
- 
-      if (idx!=-1) {
-        searchResults.Search(searchValue);
-      } else { // no file with search results => force empty search results
-        searchResults.Search('====');
-      }
+    
+    let onLastLoad = function() {
+      searchResults.Search(searchValue);
 
       if (domPopupSearchResultsWindow.style.display!='block')
       {
@@ -383,10 +516,22 @@ function SearchBox(name, resultsPath, extension)
       }
     }
 
-    if (jsFile) {
+    let loadCounter = 0;
+    var handleResults = function() {
+      document.getElementById("Loading").style.display="none";
+      if (typeof searchData !== 'undefined') {
+        createResults(resultsPath, loadCounter === 0);
+        document.getElementById("NoMatches").style.display="none";
+      }
+
+      loadCounter++;
+      if (jsFiles.length === loadCounter) {
+        onLastLoad();
+      }
+    }
+
+    for (let jsFile of jsFiles) {
       loadJS(jsFile, handleResults, this.DOMPopupSearchResultsWindow());
-    } else {
-      handleResults();
     }
 
     this.lastSearchValue = searchValue;
@@ -493,13 +638,11 @@ function SearchResults(name)
         search = unescape(search);
       }
 
-      search = search.replace(/^ +/, ""); // strip leading spaces
-      search = search.replace(/ +$/, ""); // strip trailing spaces
+      search = search.replaceAll(" ", "");
       search = search.toLowerCase();
-      search = convertToId(search);
 
       var resultRows = document.getElementsByTagName("div");
-      var matches = 0;
+      var matches = new Map();
 
       var i = 0;
       while (i < resultRows.length)
@@ -507,32 +650,69 @@ function SearchResults(name)
         var row = resultRows.item(i);
         if (row.className == "SRResult")
         {
-          var rowMatchName = row.id.toLowerCase();
-          rowMatchName = rowMatchName.replace(/^sr\d*_/, ''); // strip 'sr123_'
-
-          if (search.length<=rowMatchName.length &&
-             rowMatchName.substr(0, search.length)==search)
-          {
+          var rowMatchName = row.dataset.name.toLowerCase();
+          let searchRelevance = new SearchRelevance(rowMatchName, search);
+          if (searchRelevance.matched()) {
             row.style.display = 'block';
-            matches++;
-          }
-          else
-          {
+            matches.set(rowMatchName, searchRelevance);
+          } else {
             row.style.display = 'none';
           }
         }
         i++;
       }
       document.getElementById("Searching").style.display='none';
-      if (matches == 0) // no results
+      if (matches.size === 0) // no results
       {
         document.getElementById("NoMatches").style.display='block';
       }
       else // at least one result
       {
         document.getElementById("NoMatches").style.display='none';
+
+        let list = document.getElementById('SRResults');
+        
+        let items = list.children;
+        let itemsArr = [];
+        for (let item of items) {
+          itemsArr.push(item);
+        }
+
+        let getKey = function(srResult) {
+          return srResult.dataset.name.toLowerCase();
+        };
+
+        itemsArr.sort(function(a, b) {
+          let searchRelevanceA = matches.get(getKey(a));
+          let searchRelevanceB = matches.get(getKey(b));
+          if (searchRelevanceA === undefined && searchRelevanceB === undefined) {
+            return 0;
+          } else if (searchRelevanceA === undefined) {
+            return -1;
+          } else if (searchRelevanceB === undefined) {
+            return 1;
+          }
+          
+          return searchRelevanceA.compare(searchRelevanceB);
+        });
+
+        for (i = 0; i < itemsArr.length; ++i) {
+          const link = itemsArr[i].firstChild.firstChild;
+          link.setAttribute('id', 'Item'+i);
+          setKeyActions(link,'return searchResults.Nav(event,'+i+')');
+
+          if (link.nextSibling.className === 'SRChildren') {
+            const resultChildren = link.nextSibling.children;
+            for (let j = 0; j < resultChildren.length; j++) {
+              const srChild = resultChildren[j];
+              srChild.setAttribute('id', 'Item'+i+'_c'+j);
+              setKeyActions(srChild,'return searchResults.NavChild(event,'+i+','+j+')');
+            }
+          }
+          list.appendChild(itemsArr[i]);
+        }
       }
-      this.lastMatchCount = matches;
+      this.lastMatchCount = matches.size;
       return true;
     }
 
@@ -737,15 +917,19 @@ function setClassAttr(elem,attr)
   elem.setAttribute('className',attr);
 }
 
-function createResults(resultsPath)
+function createResults(resultsPath, emptyResults)
 {
   var results = document.getElementById("SRResults");
-  results.innerHTML = '';
+  if (emptyResults) {
+    results.innerHTML = '';
+  }
   for (var e=0; e<searchData.length; e++)
   {
     var id = searchData[e][0];
+    var name = searchData[e][1][0];
     var srResult = document.createElement('div');
     srResult.setAttribute('id','SR_'+id);
+    srResult.setAttribute('data-name',name);
     setClassAttr(srResult,'SRResult');
     var srEntry = document.createElement('div');
     setClassAttr(srEntry,'SREntry');
@@ -753,7 +937,7 @@ function createResults(resultsPath)
     srLink.setAttribute('id','Item'+e);
     setKeyActions(srLink,'return searchResults.Nav(event,'+e+')');
     setClassAttr(srLink,'SRSymbol');
-    srLink.innerHTML = searchData[e][1][0];
+    srLink.innerHTML = name;
     srEntry.appendChild(srLink);
     if (searchData[e][1].length==2) // single result
     {
