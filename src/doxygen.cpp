@@ -3275,7 +3275,7 @@ static void addMethodToClass(const Entry *root,ClassDefMutable *cd,
 
 static void addGlobalFunction(const Entry *root,const QCString &rname,const QCString &sc)
 {
-  if (root->docLine == -1 and !rname.contains("operator")) {
+  if (root->docLine == -1 && !rname.contains("operator")) {
       warn_undoc(
           root->fileName,root->startLine,
           "Function %s is not documented.",
