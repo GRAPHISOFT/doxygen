@@ -1331,13 +1331,6 @@ void addClassToGroups(const Entry *root,ClassDef *cd)
       //printf("Compound %s: in group %s\n",qPrint(cd->name()),gd->groupTitle());
     }
   }
-  bool mandatoryGroup = Config_getBool(WARN_ON_UNGROUPED);
-  if (mandatoryGroup && cd->partOfGroups().empty()) {
-    warn(root->fileName,root->startLine,
-      "Missing group of %s",
-      qPrint(cd->name())
-    );
-  } 
 }
 
 void addConceptToGroups(const Entry *root,ConceptDef *cd)

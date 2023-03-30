@@ -3377,7 +3377,7 @@ static void addGlobalFunction(const Entry *root,const QCString &rname,const QCSt
   addMemberToGroups(root,md.get());
   
   bool mandatoryGroup = Config_getBool(WARN_ON_UNGROUPED);
-  if (mandatoryGroup && md->getGroupDef() == nullptr) {
+  if (mandatoryGroup && md->hasDocumentation () && md->getGroupDef() == nullptr && !md->name().contains("operator")) {
     warn(root->fileName,root->startLine,
       "Missing group of %s",
       qPrint(md->name())
