@@ -1561,13 +1561,6 @@ void addMemberToGroups(const Entry *root,MemberDef *md)
       }
     }
   }
-  bool mandatoryGroup = Config_getBool(WARN_ON_UNGROUPED);
-  if (mandatoryGroup && md->getGroupDef() == nullptr) {
-    warn(root->fileName,root->startLine,
-      "Missing group of %s",
-      qPrint(md->name())
-    );
-  } 
 }
 
 

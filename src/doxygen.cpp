@@ -3375,6 +3375,15 @@ static void addGlobalFunction(const Entry *root,const QCString &rname,const QCSt
   }
 
   addMemberToGroups(root,md.get());
+  
+  bool mandatoryGroup = Config_getBool(WARN_ON_UNGROUPED);
+  if (mandatoryGroup && md->getGroupDef() == nullptr) {
+    warn(root->fileName,root->startLine,
+      "Missing group of %s",
+      qPrint(md->name())
+    );
+  } 
+
   if (root->relatesType == RelatesType::Simple) // if this is a relatesalso command,
                                                 // allow find Member to pick it up
   {
