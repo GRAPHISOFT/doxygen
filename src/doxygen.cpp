@@ -3275,6 +3275,13 @@ static void addMethodToClass(const Entry *root,ClassDefMutable *cd,
 
 static void addGlobalFunction(const Entry *root,const QCString &rname,const QCString &sc)
 {
+  if (root->docLine == -1 and !rname.contains("operator")) {
+      warn_undoc(
+          root->fileName,root->startLine,
+          "Function %s is not documented.",
+          qPrint(rname)
+      );
+  }
   QCString scope = sc;
 
   // new global function
