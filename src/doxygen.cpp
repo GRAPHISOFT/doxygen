@@ -3275,6 +3275,13 @@ static void addMethodToClass(const Entry *root,ClassDefMutable *cd,
 
 static void addGlobalFunction(const Entry *root,const QCString &rname,const QCString &sc)
 {
+  if (root->docLine == -1 && !rname.contains("operator")) {
+      warn_undoc(
+          root->fileName,root->startLine,
+          "Function %s is not documented.",
+          qPrint(rname)
+      );
+  }
   QCString scope = sc;
 
   // new global function
@@ -3368,6 +3375,15 @@ static void addGlobalFunction(const Entry *root,const QCString &rname,const QCSt
   }
 
   addMemberToGroups(root,md.get());
+  
+  bool mandatoryGroup = Config_getBool(WARN_ON_UNGROUPED);
+  if (mandatoryGroup && md->hasDocumentation () && md->getGroupDef() == nullptr && !md->name().contains("operator")) {
+    warn(root->fileName,root->startLine,
+      "Missing group of %s",
+      qPrint(md->name())
+    );
+  } 
+
   if (root->relatesType == RelatesType::Simple) // if this is a relatesalso command,
                                                 // allow find Member to pick it up
   {

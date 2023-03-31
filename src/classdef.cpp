@@ -2787,6 +2787,13 @@ void ClassDefImpl::writeDocumentation(OutputList &ol) const
   {
     writeMemberPages(ol);
   }
+  bool mandatoryGroup = Config_getBool(WARN_ON_UNGROUPED);
+  if (mandatoryGroup && hasDocumentation() && partOfGroups().empty() && !name().contains("operator")) {
+    warn(getDefFileName(),getDefLine(),
+      "Missing group of %s",
+      qPrint(name())
+    );
+  } 
 }
 
 void ClassDefImpl::writeMemberPages(OutputList &ol) const
