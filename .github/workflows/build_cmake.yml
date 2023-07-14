@@ -16,7 +16,7 @@ jobs:
         - {
             name: "macOS Latest Release",
             os: macos-latest,
-            build_type: "Release", cc: "clang", cxx: "clang++",
+            build_type: "Debug", cc: "clang", cxx: "clang++",
             build_gen: "Unix Makefiles"
           }
         - {
