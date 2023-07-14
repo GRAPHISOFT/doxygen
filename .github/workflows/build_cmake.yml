@@ -1,6 +1,6 @@
 name: CMake Build for Doxygen
 
-on: workflow_dispatch
+on: pull_request
 
 jobs:
   build:
