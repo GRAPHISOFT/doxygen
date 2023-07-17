@@ -122,10 +122,6 @@ jobs:
         python --version;
         echo "=== cmake ===";
         cmake --version;
-        echo "=== bibtex ===";
-        bibtex --version
-        echo "=== dvips ===";
-        dvips --version
         echo "=== bison ===";
         bison --version;
         echo "=== flex ===";
