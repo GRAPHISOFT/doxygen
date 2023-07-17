@@ -38,13 +38,6 @@ jobs:
         target: .  
       if: matrix.config.os == 'windows-latest'
 
-    - name: Install LaTeX (MacOS)
-      run: |
-        brew update
-        brew install --cask mactex;
-        echo "/Library/TeX/texbin/" >> $GITHUB_PATH
-      if: matrix.config.os == 'macos-latest'
-
     - name: Install LaTeX (Windows)
       uses: teatimeguest/setup-texlive-action@v2
       with:
@@ -118,7 +111,7 @@ jobs:
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
-        version: 6.6.0
+        version: '6.6.0'
     
     - name: Check tool versions (Linux / MacOS)
       shell: bash
