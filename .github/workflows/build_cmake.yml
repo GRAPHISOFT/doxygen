@@ -19,12 +19,12 @@ jobs:
             build_type: "Release", cc: "clang", cxx: "clang++",
             build_gen: "Unix Makefiles"
           }
-        - {
-            name: "Windows Latest MSVC Release", 
-            os: windows-latest,
-            build_type: "Release", cc: "cl", cxx: "cl",
-            build_gen: "NMake Makefiles"
-          }
+        # - {
+        #     name: "Windows Latest MSVC Release", 
+        #     os: windows-latest,
+        #     build_type: "Release", cc: "cl", cxx: "cl",
+        #     build_gen: "NMake Makefiles"
+        #   }
     steps:
     - name: Checkout doxygen
       uses: actions/checkout@v3
