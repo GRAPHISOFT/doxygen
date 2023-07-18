@@ -17,8 +17,7 @@ jobs:
             name: "macOS Latest Release",
             os: macos-latest,
             build_type: "Release", cc: "clang", cxx: "clang++",
-            build_gen: "Xcode",
-            cmake_extra_opts: -T buildsystem=1
+            build_gen: "Unix Makefiles"
           }
         # - {
         #     name: "Windows Latest MSVC Release", 
@@ -63,6 +62,12 @@ jobs:
         export GSpath=`echo "$GSpath" | sed -e "s%/c%C:%"`
         echo "$GSpath" >> $GITHUB_PATH
       if: matrix.config.os == 'windows-latest'
+
+    - name: Install xmllint (MacOS)
+      run: |
+         brew update
+         brew install libxml2
+      if: matrix.config.os == 'macos-latest'
 
     - name: Install bison (MacOS)
       run: |
@@ -160,7 +165,7 @@ jobs:
             -D CMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
             -G "${{ matrix.config.build_gen }}"
             -Dbuild_doc=YES
-            -Dbuild_for_code_sign=YES
+            -Dbuild_for_code_sign=NO
             ${{ matrix.config.cmake_extra_opts }}            
           RESULT_VARIABLE result
         )

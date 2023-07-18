@@ -146,7 +146,7 @@ endif ()
 if (build_for_code_sign)
   message(STATUS "Set building properties for code sign")
   set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS NO)
-  set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS "$(inherited)  --timestamp")
+  set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS "$$(inherited) --timestamp")
 endif ()
 
 find_program(DOT NAMES dot)
