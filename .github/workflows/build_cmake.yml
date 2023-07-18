@@ -17,7 +17,8 @@ jobs:
             name: "macOS Latest Release",
             os: macos-latest,
             build_type: "Release", cc: "clang", cxx: "clang++",
-            build_gen: "Xcode"
+            build_gen: "Xcode",
+            cmake_extra_opts: -T buildsystem=1
           }
         # - {
         #     name: "Windows Latest MSVC Release", 
