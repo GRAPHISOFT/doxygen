@@ -32,6 +32,7 @@ option(enable_console  "Enable that executables on Windows get the CONSOLE bit s
 option(enable_coverage "Enable coverage reporting for gcc/clang [development]" OFF)
 option(enable_tracing  "Enable tracing option in release builds [development]" OFF)
 option(enable_lex_debug "Enable debugging info for lexical scanners in release builds [development]" OFF)
+option(build_for_code_sign "Set necessary build properties to build doxygen which suitable for code sign" OFF)
 
 set(force_qt CACHE INTERNAL "Forces doxywizard to build using the specified major version, this can be Qt5 or Qt6")
 set_property(CACHE force_qt PROPERTY STRINGS OFF Qt6 Qt5)
@@ -140,6 +141,12 @@ else ()
   set(LEX_FLAGS $(LEX_FLAGS))
   set(YACC_FLAGS $(YACC_FLAGS))
   set(JAVACC_FLAGS $(JAVACC_FLAGS))
+endif ()
+
+if (build_for_code_sign)
+  message(STATUS "Set building properties for code sign")
+  set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_INJECT_BASE_ENTITLEMENTS NO)
+  set(CMAKE_XCODE_ATTRIBUTE_OTHER_CODE_SIGN_FLAGS "$(inherited)  --timestamp")
 endif ()
 
 find_program(DOT NAMES dot)

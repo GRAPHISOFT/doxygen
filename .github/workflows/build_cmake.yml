@@ -17,7 +17,7 @@ jobs:
             name: "macOS Latest Release",
             os: macos-latest,
             build_type: "Release", cc: "clang", cxx: "clang++",
-            build_gen: "Unix Makefiles"
+            build_gen: "Xcode"
           }
         # - {
         #     name: "Windows Latest MSVC Release", 
@@ -63,12 +63,6 @@ jobs:
         echo "$GSpath" >> $GITHUB_PATH
       if: matrix.config.os == 'windows-latest'
 
-    - name: Install xmllint (MacOS)
-      run: |
-         brew update
-         brew install libxml2
-      if: matrix.config.os == 'macos-latest'
-
     - name: Install bison (MacOS)
       run: |
         brew update
@@ -107,11 +101,6 @@ jobs:
       run:
         refreshenv
       if: matrix.config.os == 'windows-latest'
-    
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v3
-      with:
-        version: '6.3.*'
     
     - name: Check tool versions (Linux / MacOS)
       shell: bash
@@ -170,7 +159,7 @@ jobs:
             -D CMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
             -G "${{ matrix.config.build_gen }}"
             -Dbuild_doc=YES
-            -Dbuild_wizard=YES
+            -Dbuild_for_code_sign=YES
             ${{ matrix.config.cmake_extra_opts }}            
           RESULT_VARIABLE result
         )
