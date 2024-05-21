@@ -1352,6 +1352,24 @@ FILE_VERSION_FILTER = "cleartool desc -fmt \%Vn"
 ]]>
       </docs>
     </option>
+    <option type='bool' id='WARN_IF_UNDOCUMENTED_CLASS' defval='1'>
+      <docs>
+<![CDATA[
+ If the \c WARN_IF_UNDOCUMENTED_CLASS tag is set to \c YES then doxygen will generate warnings
+ for undocumented classes and structs. If \ref cfg_extract_all "EXTRACT_ALL" is set to \c YES then this flag will
+ automatically be disabled.
+]]>
+      </docs>
+    </option>
+    <option type='bool' id='WARN_IF_UNDOCUMENTED_NAMESPACE' defval='1'>
+      <docs>
+<![CDATA[
+ If the \c WARN_IF_UNDOCUMENTED_NAMESPACE tag is set to \c YES then doxygen will generate warnings
+ for undocumented namespaces. If \ref cfg_extract_all "EXTRACT_ALL" is set to \c YES then this flag will
+ automatically be disabled.
+]]>
+      </docs>
+    </option>
     <option type='bool' id='WARN_IF_DOC_ERROR' defval='1'>
       <docs>
 <![CDATA[

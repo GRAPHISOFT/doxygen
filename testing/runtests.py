@@ -28,6 +28,7 @@ def xpopen(cmd, cmd1="",encoding='utf-8-sig', getStderr=False):
     Python 2 does not have the encoding argument. Python 3 has one. and
     '''
 
+    print('Running cmd: %s' % cmd)
     if sys.version_info[0] == 2:
         return os.popen(cmd).read() # Python 2 without encoding
     else:
@@ -196,6 +197,7 @@ class Tester:
         if (self.args.noredir):
             redir=''
 
+        print('Running doxygen: os.system("%s %s/Doxyfile %s")' % (self.args.doxygen,self.test_out,redir))
         if os.system('%s %s/Doxyfile %s' % (self.args.doxygen,self.test_out,redir))!=0:
             print('Error: failed to run %s on %s/Doxyfile' % (self.args.doxygen,self.test_out))
             sys.exit(1)
@@ -262,6 +264,22 @@ class Tester:
         shutil.rmtree(self.test_out+'/out',ignore_errors=True)
         os.remove(self.test_out+'/Doxyfile')
         return True
+
+    # check the warnings log file for any unexpected warnings
+    def check_warnings(self,log_file_path,expected_warning_patterns):
+        with xopen(log_file_path, 'r', encoding='ISO-8859-1') as log_file:
+            log_contents = log_file.readlines()
+
+        unexpected_warnings = []
+        missing_warnings = set(expected_warning_patterns)
+        for line in log_contents:
+            if not any(re.search(pattern, line) for pattern in expected_warning_patterns):
+                unexpected_warnings.append(line)
+            for pattern in expected_warning_patterns:
+                if re.search(pattern, line):
+                    missing_warnings.discard(pattern)
+
+        return unexpected_warnings, missing_warnings
 
     # check the relevant files of a doxygen run with the reference material
     def perform_test(self,testmgr):
@@ -519,10 +537,19 @@ class Tester:
             elif not self.args.keep:
                 shutil.rmtree(latex_output,ignore_errors=True)
 
-        warnings = xopen(self.test_out + "/warnings.log",'r',encoding='ISO-8859-1').read()
-        failed_warn =  len(warnings)!=0
-        if failed_warn:
-            msg += (warnings,)
+        # Path to the warnings log file
+        log_file_path = self.test_out + "/warnings.log"
+        # Retrieve expected warning patterns from the test configuration
+        expected_warning_patterns = self.config.get('expected_warning_patterns', [])
+        # Check for unexpected warnings
+        unexpected_warnings, missing_warnings = self.check_warnings(log_file_path, expected_warning_patterns)
+        failed_warn = False
+        if unexpected_warnings or missing_warnings:
+            failed_warn = True
+            if unexpected_warnings:
+                msg += ("Unexpected warnings found:\n" + "".join(unexpected_warnings),)
+            if missing_warnings:
+                msg += ("Expected warnings not found:\n" + "".join(missing_warnings),)
 
         if failed_warn or failed_xml or failed_html or failed_qhp or failed_latex or failed_docbook or failed_rtf or failed_xmlxsd:
             testmgr.ok(False,self.test_name,msg)
