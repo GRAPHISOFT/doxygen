@@ -91,8 +91,8 @@ void DotGfxHierarchyTable::writeGraph(TextStream &out,
   out << "<table border=\"0\" cellspacing=\"10\" cellpadding=\"0\">\n";
 
   int count=0;
-  std::sort(m_rootSubgraphs.begin(),m_rootSubgraphs.end(),
-            [](auto n1,auto n2) { return qstricmp(n1->label(),n2->label())<0; });
+  std::stable_sort(m_rootSubgraphs.begin(),m_rootSubgraphs.end(),
+            [](auto n1,auto n2) { return qstricmp_sort(n1->label(),n2->label())<0; });
   for (auto n : m_rootSubgraphs)
   {
     out << "<tr><td>";
@@ -114,7 +114,7 @@ void DotGfxHierarchyTable::addHierarchy(DotNode *n,const ClassDef *cd,ClassDefSe
       auto it = m_usedNodes.find(bClass->name().str());
       //printf("  Node '%s' Found visible class='%s'\n",qPrint(n->label()),
       //                                              qPrint(bClass->name()));
-      DotNode *root = 0;
+      DotNode *root = nullptr;
       if (it!=m_usedNodes.end()) // node already present
       {
         const auto &bn = it->second;
@@ -149,7 +149,7 @@ void DotGfxHierarchyTable::addHierarchy(DotNode *n,const ClassDef *cd,ClassDefSe
           }
         }
         QCString tooltip = bClass->briefDescriptionAsTooltip();
-        auto bn = std::make_unique<DotNode>(getNextNodeNumber(),
+        auto bn = std::make_unique<DotNode>(this,
             bClass->displayName(),
             tooltip,
             tmp_url
@@ -181,7 +181,7 @@ void DotGfxHierarchyTable::addClassList(const ClassLinkedMap &cl,ClassDefSet &vi
   for (const auto &cd : cl)
   {
     //printf("Trying %s subClasses=%d\n",qPrint(cd->name()),cd->subClasses()->count());
-    if (cd->getLanguage()==SrcLangExt_VHDL &&
+    if (cd->getLanguage()==SrcLangExt::VHDL &&
       VhdlDocGen::convert(cd->protection())!=VhdlDocGen::ENTITYCLASS
       )
     {
@@ -206,7 +206,7 @@ void DotGfxHierarchyTable::addClassList(const ClassLinkedMap &cl,ClassDefSet &vi
       }
       //printf("Inserting root class %s\n",qPrint(cd->name()));
       QCString tooltip = cd->briefDescriptionAsTooltip();
-      auto n = std::make_unique<DotNode>(getNextNodeNumber(),
+      auto n = std::make_unique<DotNode>(this,
         cd->displayName(),
         tooltip,
         tmp_url);

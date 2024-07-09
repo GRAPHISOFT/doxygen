@@ -23,7 +23,7 @@
 static QCString getUniqueId(const MemberDef *md)
 {
   const MemberDef *def = md->memberDefinition();
-  if (def==0) def = md;
+  if (def==nullptr) def = md;
   QCString result = def->getReference()+"$"+
          def->getOutputFileBase()+"#"+
          def->anchor();
@@ -60,7 +60,7 @@ void DotCallGraph::buildGraph(DotNode *n,const MemberDef *md,int distance)
         }
         QCString tooltip = rmd->briefDescriptionAsTooltip();
         DotNode *bn = new DotNode(
-            getNextNodeNumber(),
+            this,
             linkToText(rmd->getLanguage(),name,FALSE),
             tooltip,
             uniqueId,
@@ -133,7 +133,7 @@ DotCallGraph::DotCallGraph(const MemberDef *md,bool inverse)
     name = md->qualifiedName();
   }
   QCString tooltip = md->briefDescriptionAsTooltip();
-  m_startNode = new DotNode(getNextNodeNumber(),
+  m_startNode = new DotNode(this,
     linkToText(md->getLanguage(),name,FALSE),
     tooltip,
     uniqueId,

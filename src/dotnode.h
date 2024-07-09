@@ -36,7 +36,6 @@ class EdgeInfo
     enum Styles { Solid=0, Dashed=1 };
     EdgeInfo(Colors color,Styles style,const QCString &lab,const QCString &url,int labColor)
         : m_color(color), m_style(style), m_label(lab), m_url(url), m_labColor(labColor) {}
-    ~EdgeInfo() {}
     int color() const      { return m_color; }
     int style() const      { return m_style; }
     QCString label() const { return m_label; }
@@ -68,11 +67,11 @@ using EdgeInfoVector = std::vector<EdgeInfo>;
 class DotNode
 {
   public:
+    static constexpr auto placeholderUrl = "-";
     static void deleteNodes(DotNode* node);
     static QCString convertLabel(const QCString& , bool htmlLike=false);
-    DotNode(int n,const QCString &lab,const QCString &tip,const QCString &url,
-        bool rootNode=FALSE,const ClassDef *cd=0);
-    ~DotNode();
+    DotNode(DotGraph *graph,const QCString &lab,const QCString &tip,const QCString &url,
+        bool rootNode=FALSE,const ClassDef *cd=nullptr);
 
     enum TruncState { Unknown, Truncated, Untruncated };
 
@@ -123,8 +122,10 @@ class DotNode
     const DotNodeRefVector &children() const { return m_children; }
     const DotNodeRefVector &parents() const { return m_parents; }
     const EdgeInfoVector &edgeInfo() const { return m_edgeInfo; }
+    DotNode &setNodeId(int number) { m_number=number; return *this; }
 
   private:
+    DotGraph        *m_graph;
     int              m_number;
     QCString         m_label;                //!< label text
     QCString         m_tooltip;              //!< node's tooltip

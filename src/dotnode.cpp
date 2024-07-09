@@ -49,8 +49,8 @@ static const char *normalArrowStyleMap[] =
   "empty",         // Protected
   "empty",         // Private
   "open",          // "use" relation
-  0,               // Undocumented
-  0                // template relation
+  nullptr,         // Undocumented
+  nullptr          // template relation
 };
 
 static const char *normalEdgeStyleMap[] =
@@ -76,8 +76,8 @@ static const char *umlArrowStyleMap[] =
   "onormal",         // Protected
   "onormal",         // Private
   "odiamond",        // "use" relation
-  0,                 // Undocumented
-  0                  // template relation
+  nullptr,           // Undocumented
+  nullptr           // template relation
 };
 
 static const char *umlEdgeStyleMap[] =
@@ -101,7 +101,7 @@ QCString escapeTooltip(const QCString &tooltip)
   if (tooltip.isEmpty()) return tooltip;
   QCString result;
   const char *p=tooltip.data();
-  char c;
+  char c = 0;
   while ((c=*p++))
   {
     switch(c)
@@ -125,11 +125,14 @@ static void writeBoxMemberList(TextStream &t,
   constexpr auto br       = "<BR ALIGN=\"LEFT\"/>";
   if (ml)
   {
+    auto hideUndocMembers = Config_getEnum(HIDE_UNDOC_MEMBERS);
     int totalCount=0;
     for (const auto &mma : *ml)
     {
       if (mma->getClassDef()==scope &&
-        (skipNames==nullptr || skipNames->find(mma->name().str())==std::end(*skipNames)))
+        (skipNames==nullptr || skipNames->find(mma->name().str())==std::end(*skipNames)) &&
+          !(hideUndocMembers && !mma->hasDocumentation())
+         )
       {
         totalCount++;
       }
@@ -140,7 +143,9 @@ static void writeBoxMemberList(TextStream &t,
     for (const auto &mma : *ml)
     {
       if (mma->getClassDef() == scope &&
-        (skipNames==nullptr || skipNames->find(mma->name().str())==std::end(*skipNames)))
+        (skipNames==nullptr || skipNames->find(mma->name().str())==std::end(*skipNames)) &&
+          !(hideUndocMembers && !mma->hasDocumentation())
+         )
       {
         int numFields = Config_getInt(UML_LIMIT_NUM_FIELDS);
         if (numFields>0 && (totalCount>numFields*3/2 && count>=numFields))
@@ -195,10 +200,9 @@ QCString DotNode::convertLabel(const QCString &l, bool htmlLike)
   QCString p(l);
   if (p.isEmpty()) return QCString();
   QCString result;
-  char c,pc=0;
+  char pc=0;
   uint32_t idx = 0;
-  int len=p.length();
-  int charsLeft=len;
+  int charsLeft=static_cast<int>(p.length());
   int sinceLast=0;
   int foldLen = Config_getInt(DOT_WRAP_THRESHOLD); // ideal text length
   QCString br;
@@ -208,7 +212,7 @@ QCString DotNode::convertLabel(const QCString &l, bool htmlLike)
     br = "\\l";
   while (idx < p.length())
   {
-    c = p[idx++];
+    char c = p[idx++];
     char cs[2] = { c, 0 };
     const char *replacement = cs;
     if (htmlLike)
@@ -295,18 +299,15 @@ static QCString stripProtectionPrefix(const QCString &s)
   }
 }
 
-DotNode::DotNode(int n,const QCString &lab,const QCString &tip, const QCString &url,
+DotNode::DotNode(DotGraph *graph,const QCString &lab,const QCString &tip, const QCString &url,
   bool isRoot,const ClassDef *cd)
-  : m_number(n)
+  : m_graph(graph)
+  , m_number(graph->getNextNodeNumber())
   , m_label(lab)
   , m_tooltip(tip)
   , m_url(url)
   , m_isRoot(isRoot)
   , m_classDef(cd)
-{
-}
-
-DotNode::~DotNode()
 {
 }
 
@@ -401,7 +402,7 @@ void DotNode::writeLabel(TextStream &t, GraphType gt) const
     {
       if (!ei.label().isEmpty()) // labels joined by \n
       {
-        int i;
+        int i=0;
         int p=0;
         QCString lab;
         while ((i=ei.label().find('\n',p))!=-1)
@@ -427,36 +428,36 @@ void DotNode::writeLabel(TextStream &t, GraphType gt) const
     {
       bool lineWritten = false;
       t << sep;
-      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType_pubAttribs),m_classDef,lineWritten,FALSE,&arrowNames);
-      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType_pubStaticAttribs),m_classDef,lineWritten,TRUE,&arrowNames);
-      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType_properties),m_classDef,lineWritten,FALSE,&arrowNames);
-      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType_pacAttribs),m_classDef,lineWritten,FALSE,&arrowNames);
-      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType_pacStaticAttribs),m_classDef,lineWritten,TRUE,&arrowNames);
-      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType_proAttribs),m_classDef,lineWritten,FALSE,&arrowNames);
-      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType_proStaticAttribs),m_classDef,lineWritten,TRUE,&arrowNames);
+      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType::PubAttribs()),m_classDef,lineWritten,FALSE,&arrowNames);
+      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType::PubStaticAttribs()),m_classDef,lineWritten,TRUE,&arrowNames);
+      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType::Properties()),m_classDef,lineWritten,FALSE,&arrowNames);
+      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType::PacAttribs()),m_classDef,lineWritten,FALSE,&arrowNames);
+      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType::PacStaticAttribs()),m_classDef,lineWritten,TRUE,&arrowNames);
+      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType::ProAttribs()),m_classDef,lineWritten,FALSE,&arrowNames);
+      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType::ProStaticAttribs()),m_classDef,lineWritten,TRUE,&arrowNames);
       if (Config_getBool(EXTRACT_PRIVATE))
       {
-        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType_priAttribs),m_classDef,lineWritten,FALSE,&arrowNames);
-        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType_priStaticAttribs),m_classDef,lineWritten,TRUE,&arrowNames);
+        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType::PriAttribs()),m_classDef,lineWritten,FALSE,&arrowNames);
+        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType::PriStaticAttribs()),m_classDef,lineWritten,TRUE,&arrowNames);
       }
       if (!lineWritten) t << empty_line;
       t << sep;
       lineWritten = false;
-      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType_pubMethods),m_classDef,lineWritten);
-      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType_pubStaticMethods),m_classDef,lineWritten,TRUE);
-      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType_pubSlots),m_classDef,lineWritten);
-      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType_pacMethods),m_classDef,lineWritten);
-      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType_pacStaticMethods),m_classDef,lineWritten,TRUE);
-      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType_proMethods),m_classDef,lineWritten);
-      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType_proStaticMethods),m_classDef,lineWritten,TRUE);
-      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType_proSlots),m_classDef,lineWritten);
+      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType::PubMethods()),m_classDef,lineWritten);
+      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType::PubStaticMethods()),m_classDef,lineWritten,TRUE);
+      writeBoxMemberList(t,'+',m_classDef->getMemberList(MemberListType::PubSlots()),m_classDef,lineWritten);
+      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType::PacMethods()),m_classDef,lineWritten);
+      writeBoxMemberList(t,'~',m_classDef->getMemberList(MemberListType::PacStaticMethods()),m_classDef,lineWritten,TRUE);
+      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType::ProMethods()),m_classDef,lineWritten);
+      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType::ProStaticMethods()),m_classDef,lineWritten,TRUE);
+      writeBoxMemberList(t,'#',m_classDef->getMemberList(MemberListType::ProSlots()),m_classDef,lineWritten);
       if (Config_getBool(EXTRACT_PRIVATE))
       {
-        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType_priMethods),m_classDef,lineWritten);
-        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType_priStaticMethods),m_classDef,lineWritten,TRUE);
-        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType_priSlots),m_classDef,lineWritten);
+        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType::PriMethods()),m_classDef,lineWritten);
+        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType::PriStaticMethods()),m_classDef,lineWritten,TRUE);
+        writeBoxMemberList(t,'-',m_classDef->getMemberList(MemberListType::PriSlots()),m_classDef,lineWritten);
       }
-      if (m_classDef->getLanguage()!=SrcLangExt_Fortran)
+      if (m_classDef->getLanguage()!=SrcLangExt::Fortran)
       {
         for (const auto &mg : m_classDef->getMemberGroups())
         {
@@ -488,8 +489,7 @@ void DotNode::writeLabel(TextStream &t, GraphType gt) const
 
 void DotNode::writeUrl(TextStream &t) const
 {
-  if (m_url.isEmpty())
-    return;
+  if (m_url.isEmpty() || m_url == DotNode::placeholderUrl) return;
   int tagPos = m_url.findRev('$');
   t << ",URL=\"";
   QCString noTagURL = m_url;
@@ -517,7 +517,7 @@ void DotNode::writeBox(TextStream &t,
                        GraphOutputFormat /*format*/,
                        bool hasNonReachableChildren) const
 {
-  const char *labCol;
+  const char *labCol = nullptr;
   const char *fillCol = "white";
   if (m_classDef)
   {
@@ -527,14 +527,20 @@ void DotNode::writeBox(TextStream &t,
       fillCol = "#FFF0F0";
     }
     else if (m_classDef->hasDocumentation() && !hasNonReachableChildren)
+    {
       labCol = "gray40";
+    }
     else if (!m_classDef->hasDocumentation() && hasNonReachableChildren)
+    {
       labCol = "orangered";
+    }
     else // (!m_classDef->hasDocumentation() && !hasNonReachableChildren)
     {
       labCol = "grey75";
       if (m_classDef->templateMaster() && m_classDef->templateMaster()->hasDocumentation())
+      {
         labCol = "gray40";
+      }
     }
   }
   else
@@ -545,6 +551,7 @@ void DotNode::writeBox(TextStream &t,
     (hasNonReachableChildren ? "#FFF0F0" : "white");
   }
   t << "  Node" << m_number << " [";
+  t << "id=\"Node" << QCString().sprintf("%06d",m_number) << "\",";
   writeLabel(t,gt);
   t << ",height=0.2,width=0.4";
   if (m_isRoot)
@@ -593,9 +600,13 @@ void DotNode::writeArrow(TextStream &t,
   QCString aStyle = eProps->arrowStyleMap[ei->color()];
   bool umlUseArrow = aStyle=="odiamond";
 
+  t << "id=\"edge" << m_graph->getNextEdgeNumber() <<
+       "_Node" << QCString().sprintf("%06d",m_number) <<
+       "_Node" << QCString().sprintf("%06d",cn->number()) << "\",";
   if (pointBack && !umlUseArrow) t << "dir=\"back\",";
   t << "color=\"" << eProps->edgeColorMap[ei->color()] << "\",";
   t << "style=\"" << eProps->edgeStyleMap[ei->style()] << "\"";
+  t << ",tooltip=\" \""; // space in tooltip is required otherwise still something like 'Node0 -> Node1' is used
   if (!ei->label().isEmpty())
   {
     t << ",label=\" " << convertLabel(ei->label()) << "\",fontcolor=\"grey\" ";
@@ -711,7 +722,7 @@ void DotNode::writeXML(TextStream &t,bool isClassGraph) const
     if (!edgeInfo.label().isEmpty())
     {
       int p=0;
-      int ni;
+      int ni=0;
       while ((ni=edgeInfo.label().find('\n',p))!=-1)
       {
         t << "          <edgelabel>"
@@ -773,7 +784,7 @@ void DotNode::writeDocbook(TextStream &t,bool isClassGraph) const
     if (!edgeInfo.label().isEmpty())
     {
       int p=0;
-      int ni;
+      int ni=0;
       while ((ni=edgeInfo.label().find('\n',p))!=-1)
       {
         t << "          <edgelabel>"
