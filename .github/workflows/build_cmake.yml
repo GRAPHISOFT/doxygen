@@ -14,43 +14,9 @@ jobs:
       matrix:
         config:
         - {
-            name: "Ubuntu Latest GCC Release",
-            os: ubuntu-20.04,
-            build_type: "Release", cc: "gcc", cxx: "g++",
-            build_gen: "Unix Makefiles",
-            cmake_extra_opts: "-Dbuild_search=YES -Dbuild_app=YES -Dbuild_parse=YES"
-          }
-        - {
-            name: "Ubuntu Latest GCC Debug",
-            os: ubuntu-20.04,
-            build_type: "Debug", cc: "gcc", cxx: "g++",
-            build_gen: "Unix Makefiles",
-            cmake_extra_opts: "-Dbuild_search=YES -Dbuild_app=YES -Dbuild_parse=YES"
-          }
-        - {
-            name: "Ubuntu Latest Clang Release",
-            os: ubuntu-20.04,
-            build_type: "Release", cc: "clang", cxx: "clang++",
-            build_gen: "Unix Makefiles",
-            cmake_extra_opts: "-Duse_libclang=YES -Dstatic_libclang=YES -Duse_libc++=NO"
-          }
-        - {
-            name: "Ubuntu Latest Clang Debug",
-            os: ubuntu-20.04,
-            build_type: "Debug", cc: "clang", cxx: "clang++",
-            build_gen: "Unix Makefiles",
-            cmake_extra_opts: "-Duse_libclang=YES -Dstatic_libclang=YES -Duse_libc++=NO"
-          }
-        - {
             name: "macOS Latest Release (Intel)",
             os: macos-13,
             build_type: "Release", cc: "clang", cxx: "clang++",
-            build_gen: "Unix Makefiles"
-          }
-        - {
-            name: "macOS Latest Debug (Intel)",
-            os: macos-13,
-            build_type: "Debug", cc: "clang", cxx: "clang++",
             build_gen: "Unix Makefiles"
           }
 #        - {
@@ -65,12 +31,6 @@ jobs:
 #            build_type: "Debug", cc: "clang", cxx: "clang++",
 #            build_gen: "Unix Makefiles"
 #          }
-        - {
-            name: "Windows Latest MSVC Debug",
-            os: windows-latest,
-            build_type: "Debug", cc: "cl", cxx: "cl",
-            build_gen: "NMake Makefiles"
-          }
         - {
             name: "Windows Latest MSVC Release",
             os: windows-latest,
@@ -90,47 +50,12 @@ jobs:
         target: .
       if: matrix.config.os == 'windows-latest'
 
-    - name: Install LaTeX (Linux)
-      run: |
-        sudo apt update --fix-missing
-        sudo apt upgrade
-        sudo apt update
-        sudo apt-get install texlive texlive-latex-recommended texlive-extra-utils texlive-latex-extra texlive-font-utils
-      if: startsWith(matrix.config.os,'ubuntu-')
-
     - name: Install LaTeX (MacOS)
       run: |
         brew update
         brew install --cask mactex;
         echo "/Library/TeX/texbin/" >> $GITHUB_PATH
       if: matrix.config.os == 'macos-13'
-
-    - name: Install libclang (Ubuntu 20.04)
-      run: |
-        sudo apt update
-        sudo apt remove llvm-8 clang-8 libclang-common-8-dev clang-format-8 libllvm8
-        sudo apt remove llvm-9 llvm-9-dev llvm-9-tools llvm-9-runtime clang-9 libclang-common-9-dev clang-format-9 libllvm9
-        #sudo apt remove llvm-10 llvm-10-dev llvm-10-tools llvm-10-runtime clang-10 clang-format-10 libclang-common-10-dev libclang-cpp10 libclang1-10 libllvm10
-        sudo apt remove llvm-11 llvm-11-dev llvm-11-tools llvm-11-runtime clang-11 clang-format-11 libclang-common-11-dev libclang-cpp11 libclang1-11 libllvm11
-        sudo apt remove llvm-12 llvm-12-dev llvm-12-tools llvm-12-runtime clang-12 clang-format-12 libclang-common-12-dev libclang-cpp12 libclang1-12 libllvm12
-        sudo apt-get autoremove
-        sudo apt-get clean
-        sudo apt install libclang-common-10-dev libclang-10-dev
-        apt list --installed | egrep '(clang|llvm)'
-        ls -d /usr/lib/llvm-*/include/
-        sudo update-alternatives --install /usr/bin/clang   clang   /usr/bin/clang-10   100
-        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-10 100
-        ls -al /usr/bin/clang++
-        ls -al /etc/alternatives/clang++
-        which clang++
-        clang++ -v
-      if: matrix.config.os == 'ubuntu-20.04'
-
-    - name: Install libxapian (Ubuntu 20.04)
-      run: |
-        sudo apt update
-        sudo apt install libxapian-dev
-      if: matrix.config.os == 'ubuntu-20.04'
 
     - name: Install LaTeX (Windows)
       uses: teatimeguest/setup-texlive-action@v3
@@ -142,12 +67,6 @@ jobs:
           cjk
           bibtex
       if: matrix.config.os == 'windows-latest'
-
-    - name: Install Ghostscript (Linux)
-      run: |
-        sudo apt update
-        sudo apt-get install ghostscript
-      if: startsWith(matrix.config.os,'ubuntu-')
 
     - name: Install Ghostscript (Windows)
       run:
@@ -162,12 +81,6 @@ jobs:
         export GSpath=`echo "$GSpath" | sed -e "s%/c%C:%"`
         echo "$GSpath" >> $GITHUB_PATH
       if: matrix.config.os == 'windows-latest'
-
-    - name: Install xmllint (Linux)
-      run: |
-         sudo apt-get update
-         sudo apt-get install libxml2-utils
-      if: startsWith(matrix.config.os,'ubuntu-')
 
     - name: Install xmllint (MacOS)
       run: |
@@ -190,12 +103,6 @@ jobs:
         #Choco-Install -PackageName winflexbison
         choco install winflexbison
       if: matrix.config.os == 'windows-latest'
-
-    - name: Install Graphviz (Linux)
-      run: |
-        sudo apt update
-        sudo apt-get install graphviz
-      if: startsWith(matrix.config.os,'ubuntu-')
 
     - name: Install Graphviz (MacOS)
       run: |
@@ -331,83 +238,3 @@ jobs:
       with:
         name: "${{ matrix.config.name }} build artifacts"
         path: build/bin/
-
-    - name: Run tests (Linux / MacOS)
-      shell: cmake -P {0}
-      run: |
-        set(ENV{CTEST_OUTPUT_ON_FAILURE} "ON")
-
-        execute_process(
-          COMMAND
-            cmake -E env TEST_FLAGS="--xml --xmlxsd --xhtml --qhp --docbook --rtf"
-            cmake --build build --target tests
-          RESULT_VARIABLE result
-        )
-        if (NOT result EQUAL 0)
-          message(FATAL_ERROR "Running tests failed!")
-        endif()
-      if: matrix.config.os != 'windows-latest'
-
-    - name: Run tests (Windows)
-      shell: cmake -P {0}
-      run: |
-        set(ENV{CTEST_OUTPUT_ON_FAILURE} "ON")
-
-        execute_process(
-          COMMAND
-            cmake -E env TEST_FLAGS="--xml --xmlxsd --xhtml --qhp --docbook --rtf --pdf"
-            cmake --build build --target tests
-          RESULT_VARIABLE result
-        )
-        if (NOT result EQUAL 0)
-          message(FATAL_ERROR "Running tests failed!")
-        endif()
-      if: matrix.config.os == 'windows-latest'
-
-    - name: Generate documentation
-      shell: cmake -P {0}
-      run: |
-        execute_process(
-          COMMAND cmake --build build --target docs
-          RESULT_VARIABLE result
-        )
-        if (NOT result EQUAL 0)
-          message(FATAL_ERROR "Building documentation failed")
-        endif()
-
-    - name: Archive html documentation artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: "Html documentation artifacts"
-        path: build/html/
-      if: matrix.config.name == 'Ubuntu Latest GCC Release'
-
-
-    - name: Archive Latex documentation artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: "Latex documentation artifacts"
-        path: build/latex/doxygen_manual.pdf
-      if: matrix.config.name == 'Ubuntu Latest GCC Release'
-
-    - name: Generate Internal documentation
-      shell: cmake -P {0}
-      run: |
-        execute_process(
-          COMMAND cmake --build build --target docs_internal
-          RESULT_VARIABLE result
-        )
-        if (NOT result EQUAL 0)
-          message(FATAL_ERROR "Building internal documentation failed")
-        endif()
-      if: matrix.config.name == 'Ubuntu Latest GCC Release'
-
-    - name: Publish Internal documentation to Github pages
-      uses: peaceiris/actions-gh-pages@v4
-      with:
-         deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-         external_repository: doxygen/doxygen-docs
-         publish_dir: build/doxygen_docs/html
-         force_orphan: true
-      if: ${{ github.event_name == 'push' && matrix.config.name == 'Ubuntu Latest GCC Release' }}
-
