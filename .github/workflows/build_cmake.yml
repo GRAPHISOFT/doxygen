@@ -30,7 +30,6 @@ jobs:
             os: windows-latest,
             build_type: "Release", cc: "cl", cxx: "cl",
             build_gen: "NMake Makefiles",
-            cmake_extra_opts: "-Dbuild_wizard=YES"
           }
     steps:
     - name: Checkout doxygen
@@ -134,12 +133,6 @@ jobs:
         refreshenv
       if: matrix.config.os == 'windows-latest'
 
-    - name: Install Qt 5
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: 5.*
-      if: matrix.config.is != 'windows-latest'
-
     - name: Check tool versions (Linux / MacOS)
       shell: bash
       run: |
@@ -202,7 +195,6 @@ jobs:
             -B build
             -D CMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
             -G "${{ matrix.config.build_gen }}"
-            -Dbuild_doc=YES
             ${{ matrix.config.cmake_extra_opts }}
           RESULT_VARIABLE result
         )
@@ -216,7 +208,7 @@ jobs:
         include(ProcessorCount)
         ProcessorCount(N)
         execute_process(
-          COMMAND cmake --build build --parallel ${N}
+          COMMAND cmake --build build --parallel ${N} --target clean
           RESULT_VARIABLE result
           OUTPUT_VARIABLE output
           ERROR_VARIABLE output
