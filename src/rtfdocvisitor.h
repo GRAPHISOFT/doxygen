@@ -31,7 +31,7 @@ class TextStream;
 class RTFDocVisitor : public DocVisitor
 {
   public:
-    RTFDocVisitor(TextStream &t,OutputCodeList &ci,const QCString &langExt);
+    RTFDocVisitor(TextStream &t,OutputCodeList &ci,const QCString &langExt, int hierarchyLevel = 0);
 
     //--------------------------------------
     // visitor functions for leaf nodes
@@ -119,6 +119,7 @@ class RTFDocVisitor : public DocVisitor
                    const QCString &anchor);
     void endLink(const QCString &ref);
     QCString getStyle(const QCString &name);
+    QCString getListTable(const int id);
 
     int indentLevel() const;
     void incIndentLevel();
@@ -146,9 +147,11 @@ class RTFDocVisitor : public DocVisitor
 
     static const int maxIndentLevels = 13;
     int m_indentLevel = 0;
+    int m_hierarchyLevel = 0;
     struct RTFListItemInfo
     {
       bool isEnum = false;
+      bool isCheck = false;
       int number = 1;
       char type = '1';
     };

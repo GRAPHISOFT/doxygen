@@ -13,15 +13,18 @@
  *
  */
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <mutex>
+#include <atomic>
+
 #include "config.h"
 #include "debug.h"
 #include "portable.h"
 #include "message.h"
 #include "doxygen.h"
-
-#include <mutex>
-#include <atomic>
+#include "fileinfo.h"
+#include "dir.h"
 
 // globals
 static QCString        g_warnFormat;
@@ -54,11 +57,22 @@ void initWarningFormat()
     {
       g_warnFile = stdout;
     }
-    else if (!(g_warnFile = Portable::fopen(g_warnlogFile,"w")))
+    else
     {
-      // point it to something valid, because warn() relies on it
-      g_warnFile = stderr;
-      err("Cannot open '%s' for writing, redirecting 'WARN_LOGFILE' output to 'stderr'\n",g_warnlogFile.data());
+      FileInfo fi(g_warnlogFile.str());
+      Dir d(fi.dirPath().c_str());
+      if (!d.exists() && !d.mkdir(fi.dirPath().c_str()))
+      {
+        // point it to something valid, because warn() relies on it
+        g_warnFile = stderr;
+        err("Cannot create directory for '%s', redirecting 'WARN_LOGFILE' output to 'stderr'\n",g_warnlogFile.data());
+      }
+      else if (!(g_warnFile = Portable::fopen(g_warnlogFile,"w")))
+      {
+        // point it to something valid, because warn() relies on it
+        g_warnFile = stderr;
+        err("Cannot open '%s' for writing, redirecting 'WARN_LOGFILE' output to 'stderr'\n",g_warnlogFile.data());
+      }
     }
   }
   else
@@ -69,6 +83,15 @@ void initWarningFormat()
   {
     g_warningStr = g_errorStr;
   }
+
+  // make sure the g_warnFile is closed in case we call exit and it is still open
+  std::atexit([](){
+      if (g_warnFile && g_warnFile!=stderr && g_warnFile!=stdout)
+      {
+        Portable::fclose(g_warnFile);
+        g_warnFile = nullptr;
+      }
+  });
 }
 
 
@@ -122,7 +145,10 @@ static void format_warn(const QCString &file,int line,const QCString &text)
   }
   if (g_warnBehavior == WARN_AS_ERROR_t::YES)
   {
-    Doxygen::terminating=true;
+    if (g_warnFile != stderr && !Config_getBool(QUIET))
+    {
+      msg("See '%s' for the reason of termination.\n",qPrint(g_warnlogFile));
+    }
     exit(1);
   }
   g_warnStat = true;
@@ -136,8 +162,12 @@ static void handle_warn_as_error()
       std::unique_lock<std::mutex> lock(g_mutex);
       QCString msgText = " (warning treated as error, aborting now)\n";
       fwrite(msgText.data(),1,msgText.length(),g_warnFile);
+      if (g_warnFile != stderr && !Config_getBool(QUIET))
+      {
+        // cannot use `msg` due to the mutex
+        fprintf(stdout,"See '%s' for the reason of termination.\n",qPrint(g_warnlogFile));
+      }
     }
-    Doxygen::terminating=true;
     exit(1);
   }
   g_warnStat = true;
@@ -159,14 +189,14 @@ static void do_warn(bool enabled, const QCString &file, int line, const char *pr
   // format + arguments
   // prefix
   // 1 position for `\0`
-  size_t bufSize = vsnprintf(NULL, 0, fmt, args) + l + 1;
-  QCString text(bufSize);
+  size_t bufSize = vsnprintf(nullptr, 0, fmt, args) + l;
+  QCString text(bufSize, QCString::ExplicitSize);
   if (prefix)
   {
     qstrncpy(text.rawData(),prefix,bufSize);
   }
-  vsnprintf(text.rawData()+l, bufSize-l, fmt, argsCopy);
-  text[static_cast<int>(bufSize)-1]='\0';
+  vsnprintf(text.rawData()+l, bufSize-l+1, fmt, argsCopy);
+  text[bufSize]='\0';
   format_warn(file,line,text);
 
   va_end(argsCopy);
@@ -184,7 +214,7 @@ QCString warn_line(const QCString &file,int line)
             "$line",lineSubst
           );
 }
-void warn(const QCString &file,int line,const char *fmt, ...)
+void warn_(const QCString &file,int line,const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
@@ -197,13 +227,7 @@ void va_warn(const QCString &file,int line,const char *fmt,va_list args)
   do_warn(Config_getBool(WARNINGS), file, line, g_warningStr, fmt, args);
 }
 
-void warn_simple(const QCString &file,int line,const char *text)
-{
-  if (!Config_getBool(WARNINGS)) return; // warning type disabled
-  format_warn(file,line,QCString(g_warningStr) + text);
-}
-
-void warn_undoc(const QCString &file,int line,const char *fmt, ...)
+void warn_undoc_(const QCString &file,int line,const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
@@ -211,7 +235,7 @@ void warn_undoc(const QCString &file,int line,const char *fmt, ...)
   va_end(args);
 }
 
-void warn_incomplete_doc(const QCString &file,int line,const char *fmt, ...)
+void warn_incomplete_doc_(const QCString &file,int line,const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
@@ -219,7 +243,7 @@ void warn_incomplete_doc(const QCString &file,int line,const char *fmt, ...)
   va_end(args);
 }
 
-void warn_doc_error(const QCString &file,int line,const char *fmt, ...)
+void warn_doc_error_(const QCString &file,int line,const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
@@ -227,7 +251,7 @@ void warn_doc_error(const QCString &file,int line,const char *fmt, ...)
   va_end(args);
 }
 
-void warn_uncond(const char *fmt, ...)
+void warn_uncond_(const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
@@ -236,7 +260,7 @@ void warn_uncond(const char *fmt, ...)
   handle_warn_as_error();
 }
 
-void err(const char *fmt, ...)
+void err_(const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
@@ -245,7 +269,7 @@ void err(const char *fmt, ...)
   handle_warn_as_error();
 }
 
-extern void err_full(const QCString &file,int line,const char *fmt, ...)
+extern void err_full_(const QCString &file,int line,const char *fmt, ...)
 {
   va_list args;
   va_start(args, fmt);
@@ -253,7 +277,7 @@ extern void err_full(const QCString &file,int line,const char *fmt, ...)
   va_end(args);
 }
 
-void term(const char *fmt, ...)
+void term_(const char *fmt, ...)
 {
   {
     std::unique_lock<std::mutex> lock(g_mutex);
@@ -266,9 +290,13 @@ void term(const char *fmt, ...)
       size_t l = strlen(g_errorStr);
       for (size_t i=0; i<l; i++) fprintf(g_warnFile, " ");
       fprintf(g_warnFile, "%s\n", "Exiting...");
+      if (!Config_getBool(QUIET))
+      {
+        // cannot use `msg` due to the mutex
+        fprintf(stdout,"See '%s' for the reason of termination.\n",qPrint(g_warnlogFile));
+      }
     }
   }
-  Doxygen::terminating=true;
   exit(1);
 }
 
@@ -281,9 +309,11 @@ void warn_flush()
 
 extern void finishWarnExit()
 {
+  fflush(stdout);
   if (g_warnBehavior == WARN_AS_ERROR_t::FAIL_ON_WARNINGS_PRINT && g_warnlogFile != "-")
   {
     Portable::fclose(g_warnFile);
+    g_warnFile = nullptr;
   }
   if (g_warnStat && g_warnBehavior == WARN_AS_ERROR_t::FAIL_ON_WARNINGS_PRINT && g_warnlogFile != "-")
   {
@@ -310,7 +340,6 @@ extern void finishWarnExit()
   if (g_warnStat && (g_warnBehavior == WARN_AS_ERROR_t::FAIL_ON_WARNINGS ||
                      g_warnBehavior == WARN_AS_ERROR_t::FAIL_ON_WARNINGS_PRINT))
   {
-    Doxygen::terminating=true;
     exit(1);
   }
 }

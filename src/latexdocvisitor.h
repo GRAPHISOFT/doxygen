@@ -26,13 +26,19 @@ class OutputCodeList;
 class LatexCodeGenerator;
 class TextStream;
 
+enum class TexOrPdf
+{
+   NO,  //!< not called through texorpdf
+   TEX, //!< called through texorpdf as TeX (first) part
+   PDF, //!< called through texorpdf as PDF (second) part
+};
 
 /*! @brief Concrete visitor implementation for LaTeX output. */
 class LatexDocVisitor : public DocVisitor
 {
   public:
     LatexDocVisitor(TextStream &t,OutputCodeList &ci,LatexCodeGenerator &lcg,
-                    const QCString &langExt);
+                    const QCString &langExt, int hierarchyLevel = 0);
 
     //--------------------------------------
     // visitor functions for leaf nodes
@@ -155,6 +161,7 @@ class LatexDocVisitor : public DocVisitor
     void incIndentLevel();
     void decIndentLevel();
     int indentLevel() const;
+    const char *getSectionName(int level) const;
 
     //--------------------------------------
     // state variables
@@ -167,6 +174,8 @@ class LatexDocVisitor : public DocVisitor
     bool m_insideItem;
     bool m_hide;
     QCString m_langExt;
+    int m_hierarchyLevel;
+    TexOrPdf m_texOrPdf = TexOrPdf::NO;
 
     struct TableState
     {
@@ -192,7 +201,7 @@ class LatexDocVisitor : public DocVisitor
 
     void pushTableState()
     {
-      m_tableStateStack.push(TableState());
+      m_tableStateStack.emplace();
     }
     void popTableState()
     {
