@@ -29,7 +29,8 @@ jobs:
             name: "Windows Latest MSVC Release",
             os: windows-latest,
             build_type: "Release", cc: "cl", cxx: "cl",
-            build_gen: "NMake Makefiles"
+            build_gen: "NMake Makefiles",
+            cmake_extra_opts: "-Dbuild_wizard=YES"
           }
     steps:
     - name: Checkout doxygen
@@ -132,6 +133,12 @@ jobs:
         Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
         refreshenv
       if: matrix.config.os == 'windows-latest'
+
+    - name: Install Qt 5
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: 5.*
+      if: matrix.config.is != 'windows-latest'
 
     - name: Check tool versions (Linux / MacOS)
       shell: bash
