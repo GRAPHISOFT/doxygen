@@ -799,7 +799,7 @@ function createResults(resultsPath, emptyResults) {
     const id = elem[0];
     const name = elem[1][0];
     if (name.endsWith("_Overview")) {
-     continue;
+     return;
     }
     const srResult = document.createElement('div');
     srResult.setAttribute('id','SR_'+id);
