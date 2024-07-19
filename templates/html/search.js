@@ -426,6 +426,7 @@ function SearchBox(name, resultsPath, extension) {
     const domPopupSearchResults = this.DOMPopupSearchResults();
     const domSearchClose = this.DOMSearchClose();
     const resultsPath = this.resultsPath;
+    const resultsMap = new Map();
     
     let onLastLoad = function() {
       searchResults.Search(searchValue);
@@ -454,7 +455,7 @@ function SearchBox(name, resultsPath, extension) {
     var handleResults = function() {
       document.getElementById("Loading").style.display="none";
       if (typeof searchData !== 'undefined') {
-        createResults(resultsPath, loadCounter === 0);
+        createResults(resultsPath, resultsMap, loadCounter === 0);
         document.getElementById("NoMatches").style.display="none";
       }
 
@@ -784,7 +785,7 @@ function setKeyActions(elem,action) {
   elem.setAttribute('onkeyup',action);
 }
 
-function createResults(resultsPath, emptyResults) {
+function createResults(resultsPath, resultsMap, emptyResults) {
 
   function setClassAttr(elem,attr) {
     elem.setAttribute('class',attr);
@@ -798,6 +799,8 @@ function createResults(resultsPath, emptyResults) {
   searchData.forEach((elem,index) => {
     const id = elem[0];
     const name = elem[1][0];
+    let shouldBeAdded = true;
+
     if (name.endsWith("_Overview")) {
      return;
     }
@@ -814,7 +817,17 @@ function createResults(resultsPath, emptyResults) {
     srLink.innerHTML = name;
     srEntry.appendChild(srLink);
     if (elem[1].length==2) { // single result
-      srLink.setAttribute('href',resultsPath+elem[1][1][0]);
+      const itemLink = resultsPath+elem[1][1][0];
+      if (resultsMap.has(name)) {
+        if (resultsMap.get(name).includes(itemLink)) { // do not add duplicate
+          shouldBeAdded = false;
+        } else {
+          resultsMap.get(name).push(itemLink);
+        }
+      } else {
+        resultsMap.set(name, [itemLink]);
+      }
+      srLink.setAttribute('href', itemLink);
       srLink.setAttribute('onclick','searchBox.CloseResultsWindow()');
       if (elem[1][1][1]) {
        srLink.setAttribute('target','_parent');
@@ -847,6 +860,9 @@ function createResults(resultsPath, emptyResults) {
       srEntry.appendChild(srChildren);
     }
     srResult.appendChild(srEntry);
+    if (!shouldBeAdded) {
+      return;
+    }
     results.appendChild(srResult);
   });
 }
